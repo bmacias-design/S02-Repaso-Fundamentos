@@ -8,6 +8,14 @@ import {
     RoomEnvironment
 } from "three/addons/environments/RoomEnvironment.js";
 
+import {
+    GLTFLoader
+} from "three/addons/loaders/GLTFLoader.js";
+
+import {
+    Reflector
+} from "three/addons/objects/Reflector.js";
+
 
 // ESCENA
 
@@ -26,7 +34,6 @@ scene.add(escaparate);
 const anchoEscaparate = 12;
 const fondoEscaparate = 8;
 const altoEscaparate = 8;
-const tamañoCuadro = 1;
 
 
 // MATERIALES DE LA ESTRUCTURA
@@ -71,7 +78,7 @@ const materialEspejo = new THREE.MeshStandardMaterial({
 // MATERIALES DE LAS PIEZAS
 
 const materialPiezaBlanca = new THREE.MeshStandardMaterial({
-    color: "#f5f0e8",
+    color: "#e4ded4",
     metalness: 0.1,
     roughness: 0.35
 });
@@ -150,93 +157,135 @@ paredIzquierda.position.set(
 escaparate.add(paredIzquierda);
 
 
-// GEOMETRÍA DE LOS CUADROS
+// TECHO
 
-const geometriaCuadro = new THREE.PlaneGeometry(
-    tamañoCuadro,
-    tamañoCuadro
+const materialTecho = new THREE.MeshStandardMaterial({
+    map: crearTexturaTablero(12, 8),
+    color: "#8a8a8a",
+    roughness: 1,
+    metalness: 0
+});
+
+const techo = new THREE.Mesh(
+    new THREE.PlaneGeometry(anchoEscaparate, fondoEscaparate),
+    materialTecho
 );
 
+techo.rotation.x = Math.PI / 2; 
+techo.position.set(0, altoEscaparate, 0);
+escaparate.add(techo);
 
-// ELEGIR COLOR DEL CUADRO
 
-function elegirMaterial(fila, columna) {
-    if ((fila + columna) % 2 === 0) {
-        return materialBlanco;
-    } else {
-        return materialNegro;
+// TEXTURA DEL TABLERO
+
+function crearTexturaTablero(columnas, filas) {
+
+    const tamañoCasilla = 96;
+
+    const lienzo = document.createElement("canvas");
+    lienzo.width = columnas * tamañoCasilla;
+    lienzo.height = filas * tamañoCasilla;
+
+    const pincel = lienzo.getContext("2d");
+
+    for (let fila = 0; fila < filas; fila++) {
+        for (let columna = 0; columna < columnas; columna++) {
+
+            const x = columna * tamañoCasilla;
+            const y = fila * tamañoCasilla;
+            const esBlanca = (fila + columna) % 2 === 0;
+
+            // Color base de la casilla
+            if (esBlanca) {
+                pincel.fillStyle = "#d4cfc5";
+            } else {
+                pincel.fillStyle = "#151515";
+            }
+
+            pincel.fillRect(x, y, tamañoCasilla, tamañoCasilla);
+        }
     }
+
+    const textura = new THREE.CanvasTexture(lienzo);
+    textura.colorSpace = THREE.SRGBColorSpace;
+    textura.anisotropy = 8;
+
+    return textura;
 }
 
 
-// PATRÓN DEL PISO
+// MATERIALES DEL TABLERO
 
-const columnasPiso = 12;
-const filasPiso = 8;
+const materialTableroPiso = new THREE.MeshStandardMaterial({
+    map: crearTexturaTablero(12, 8),
+    roughness: 0.15,
+    metalness: 0.1,
+    transparent: true,
+    opacity: 0.7
+});
 
-for (let fila = 0; fila < filasPiso; fila++) {
-    for (let columna = 0; columna < columnasPiso; columna++) {
+const materialTableroParedTrasera = new THREE.MeshStandardMaterial({
+    map: crearTexturaTablero(12, 8),
+    roughness: 0.25,
+    metalness: 0.1
+});
 
-        const cuadro = new THREE.Mesh(
-            geometriaCuadro,
-            elegirMaterial(fila, columna)
-        );
+const materialTableroParedIzquierda = new THREE.MeshStandardMaterial({
+    map: crearTexturaTablero(8, 8),
+    roughness: 0.25,
+    metalness: 0.1
+});
 
-        cuadro.rotation.x = -Math.PI / 2;
 
-        cuadro.position.x = -5.5 + columna;
-        cuadro.position.y = 0.11;
-        cuadro.position.z = -3.5 + fila;
+// PISO REFLEJANTE
 
-        escaparate.add(cuadro);
+const espejoSuelo = new Reflector(
+    new THREE.PlaneGeometry(anchoEscaparate, fondoEscaparate),
+    {
+        textureWidth: 512,
+        textureHeight: 512,
+        clipBias: 0.003
     }
-}
+);
+
+espejoSuelo.rotation.x = -Math.PI / 2;
+espejoSuelo.position.y = 0.105;
+escaparate.add(espejoSuelo);
 
 
-// PATRÓN DE LA PARED TRASERA
+// TABLERO DEL PISO
 
-const columnasPared = 12;
-const filasPared = 8;
+const tableroPiso = new THREE.Mesh(
+    new THREE.PlaneGeometry(anchoEscaparate, fondoEscaparate),
+    materialTableroPiso
+);
 
-for (let fila = 0; fila < filasPared; fila++) {
-    for (let columna = 0; columna < columnasPared; columna++) {
-
-        const cuadro = new THREE.Mesh(
-            geometriaCuadro,
-            elegirMaterial(fila, columna)
-        );
-
-        cuadro.position.x = -5.5 + columna;
-        cuadro.position.y = 0.5 + fila;
-        cuadro.position.z = -3.79;
-
-        escaparate.add(cuadro);
-    }
-}
+tableroPiso.rotation.x = -Math.PI / 2;
+tableroPiso.position.y = 0.115;
+escaparate.add(tableroPiso);
 
 
-// PATRÓN DE LA PARED IZQUIERDA
+// TABLERO DE LA PARED TRASERA
 
-const columnasLaterales = 8;
-const filasLaterales = 8;
+const tableroParedTrasera = new THREE.Mesh(
+    new THREE.PlaneGeometry(anchoEscaparate, altoEscaparate),
+    materialTableroParedTrasera
+);
 
-for (let fila = 0; fila < filasLaterales; fila++) {
-    for (let columna = 0; columna < columnasLaterales; columna++) {
+tableroParedTrasera.position.set(0, altoEscaparate / 2, -3.79);
+escaparate.add(tableroParedTrasera);
 
-        const cuadro = new THREE.Mesh(
-            geometriaCuadro,
-            elegirMaterial(fila, columna)
-        );
 
-        cuadro.rotation.y = Math.PI / 2;
+// TABLERO DE LA PARED IZQUIERDA
 
-        cuadro.position.x = -5.79;
-        cuadro.position.y = 0.5 + fila;
-        cuadro.position.z = -3.5 + columna;
+const tableroParedIzquierda = new THREE.Mesh(
+    new THREE.PlaneGeometry(fondoEscaparate, altoEscaparate),
+    materialTableroParedIzquierda
+);
 
-        escaparate.add(cuadro);
-    }
-}
+tableroParedIzquierda.rotation.y = Math.PI / 2;
+tableroParedIzquierda.position.set(-5.79, altoEscaparate / 2, 0);
+escaparate.add(tableroParedIzquierda);
 
 
 // ESPEJO EXTERIOR TRASERO
@@ -308,196 +357,10 @@ espejoPiso.position.set(
 escaparate.add(espejoPiso);
 
 
-// CREAR UN PEÓN
+// LISTAS DE MANECILLAS 
 
-function crearPeon(
-    material,
-    posicionX,
-    posicionY,
-    posicionZ,
-    rotacionX,
-    rotacionZ,
-    escala
-) {
-    const peon = new THREE.Group();
-
-    const base = new THREE.Mesh(
-        new THREE.CylinderGeometry(
-            0.42,
-            0.5,
-            0.25,
-            32
-        ),
-        material
-    );
-
-    base.position.y = 0.125;
-    peon.add(base);
-
-    const baseSuperior = new THREE.Mesh(
-        new THREE.CylinderGeometry(
-            0.3,
-            0.4,
-            0.18,
-            32
-        ),
-        material
-    );
-
-    baseSuperior.position.y = 0.34;
-    peon.add(baseSuperior);
-
-    const cuerpo = new THREE.Mesh(
-        new THREE.CylinderGeometry(
-            0.17,
-            0.3,
-            0.65,
-            32
-        ),
-        material
-    );
-
-    cuerpo.position.y = 0.73;
-    peon.add(cuerpo);
-
-    const cuello = new THREE.Mesh(
-        new THREE.CylinderGeometry(
-            0.25,
-            0.2,
-            0.14,
-            32
-        ),
-        material
-    );
-
-    cuello.position.y = 1.1;
-    peon.add(cuello);
-
-    const cabeza = new THREE.Mesh(
-        new THREE.SphereGeometry(
-            0.25,
-            32,
-            32
-        ),
-        material
-    );
-
-    cabeza.position.y = 1.38;
-    peon.add(cabeza);
-
-    peon.position.set(
-        posicionX,
-        posicionY,
-        posicionZ
-    );
-
-    peon.rotation.x = rotacionX;
-    peon.rotation.z = rotacionZ;
-
-    peon.scale.set(
-        escala,
-        escala,
-        escala
-    );
-
-    escaparate.add(peon);
-}
-
-
-// CREAR UNA TORRE
-
-function crearTorre(
-    material,
-    posicionX,
-    posicionY,
-    posicionZ,
-    rotacionX,
-    rotacionZ,
-    escala
-) {
-    const torre = new THREE.Group();
-
-    const base = new THREE.Mesh(
-        new THREE.CylinderGeometry(
-            0.45,
-            0.52,
-            0.25,
-            32
-        ),
-        material
-    );
-
-    base.position.y = 0.125;
-    torre.add(base);
-
-    const baseSuperior = new THREE.Mesh(
-        new THREE.CylinderGeometry(
-            0.35,
-            0.43,
-            0.18,
-            32
-        ),
-        material
-    );
-
-    baseSuperior.position.y = 0.34;
-    torre.add(baseSuperior);
-
-    const cuerpo = new THREE.Mesh(
-        new THREE.CylinderGeometry(
-            0.27,
-            0.35,
-            0.8,
-            32
-        ),
-        material
-    );
-
-    cuerpo.position.y = 0.82;
-    torre.add(cuerpo);
-
-    const parteSuperior = new THREE.Mesh(
-        new THREE.CylinderGeometry(
-            0.44,
-            0.32,
-            0.25,
-            32
-        ),
-        material
-    );
-
-    parteSuperior.position.y = 1.33;
-    torre.add(parteSuperior);
-
-    const corona = new THREE.Mesh(
-        new THREE.BoxGeometry(
-            0.75,
-            0.22,
-            0.75
-        ),
-        material
-    );
-
-    corona.position.y = 1.56;
-    torre.add(corona);
-
-    torre.position.set(
-        posicionX,
-        posicionY,
-        posicionZ
-    );
-
-    torre.rotation.x = rotacionX;
-    torre.rotation.z = rotacionZ;
-
-    torre.scale.set(
-        escala,
-        escala,
-        escala
-    );
-
-    escaparate.add(torre);
-}
+const manecillasLargas = [];
+const manecillasCortas = [];
 
 
 // CREAR UN RELOJ
@@ -548,6 +411,11 @@ function crearReloj(
     marco.position.z = 0.03;
     reloj.add(marco);
 
+
+    const pivoteLargo = new THREE.Group();
+    pivoteLargo.position.z = 0.06;
+    reloj.add(pivoteLargo);
+
     const manecillaLarga = new THREE.Mesh(
         new THREE.BoxGeometry(
             0.06,
@@ -558,8 +426,12 @@ function crearReloj(
     );
 
     manecillaLarga.position.y = 0.2;
-    manecillaLarga.position.z = 0.06;
-    reloj.add(manecillaLarga);
+    pivoteLargo.add(manecillaLarga);
+    manecillasLargas.push(pivoteLargo);
+
+    const pivoteCorto = new THREE.Group();
+    pivoteCorto.position.z = 0.07;
+    reloj.add(pivoteCorto);
 
     const manecillaCorta = new THREE.Mesh(
         new THREE.BoxGeometry(
@@ -571,8 +443,8 @@ function crearReloj(
     );
 
     manecillaCorta.position.x = 0.13;
-    manecillaCorta.position.z = 0.07;
-    reloj.add(manecillaCorta);
+    pivoteCorto.add(manecillaCorta);
+    manecillasCortas.push(pivoteCorto);
 
     const centro = new THREE.Mesh(
         new THREE.SphereGeometry(
@@ -604,128 +476,6 @@ function crearReloj(
 }
 
 
-// PIEZAS DEL PISO
-
-// Pieza roja 1
-crearTorre(
-    materialPiezaRoja,
-    -4.4,
-    0.12,
-    2.7,
-    0,
-    0,
-    1.8
-);
-
-crearPeon(
-    materialPiezaBlanca,
-    -1.8,
-    0.12,
-    0.6,
-    0,
-    0,
-    1.25
-);
-
-// Pieza roja 2
-crearPeon(
-    materialPiezaRoja,
-    0.4,
-    0.12,
-    -1.8,
-    0,
-    0,
-    1.55
-);
-
-crearPeon(
-    materialPiezaNegra,
-    2.7,
-    0.12,
-    -2.3,
-    0,
-    0,
-    1.25
-);
-
-crearTorre(
-    materialPiezaBlanca,
-    4.3,
-    0.12,
-    2.4,
-    0,
-    0,
-    2
-);
-
-
-// PIEZAS DE LA PARED TRASERA
-
-// Pieza roja 3
-crearPeon(
-    materialPiezaRoja,
-    -4.4,
-    6.4,
-    -3.78,
-    Math.PI / 2,
-    0,
-    1.4
-);
-
-crearTorre(
-    materialPiezaNegra,
-    -1.3,
-    3.6,
-    -3.78,
-    Math.PI / 2,
-    0,
-    1.7
-);
-
-crearPeon(
-    materialPiezaBlanca,
-    2.7,
-    6.3,
-    -3.78,
-    Math.PI / 2,
-    0,
-    1.35
-);
-
-crearPeon(
-    materialPiezaNegra,
-    5,
-    2.2,
-    -3.78,
-    Math.PI / 2,
-    0,
-    1.2
-);
-
-
-// PIEZAS DE LA PARED IZQUIERDA
-
-crearTorre(
-    materialPiezaBlanca,
-    -5.78,
-    5.8,
-    2.5,
-    0,
-    -Math.PI / 2,
-    1.55
-);
-
-crearPeon(
-    materialPiezaNegra,
-    -5.78,
-    2,
-    -2.5,
-    0,
-    -Math.PI / 2,
-    1.35
-);
-
-
 // RELOJES DE LA PARED TRASERA
 
 crearReloj(
@@ -754,6 +504,423 @@ crearReloj(
     Math.PI / 2,
     0.8
 );
+
+
+// ESPEJOS CON ARCO Y MARCO ROJO 
+
+const materialMarcoEspejo = new THREE.MeshStandardMaterial({
+    color: "#b31522",
+    metalness: 0.35,
+    roughness: 0.3
+});
+
+
+// FORMA DE ARCO
+
+function crearFormaArco(ancho, alto) {
+
+    const radio = ancho / 2;
+
+    const forma = new THREE.Shape();
+
+    forma.moveTo(-radio, 0);
+    forma.lineTo(radio, 0);
+    forma.lineTo(radio, alto - radio);
+    forma.absarc(0, alto - radio, radio, 0, Math.PI, false);
+    forma.lineTo(-radio, 0);
+
+    return forma;
+}
+
+
+// CREAR UN ESPEJO CON ARCO
+
+function crearEspejoArco(
+    posicionX,
+    posicionY,
+    posicionZ,
+    rotacionY,
+    ancho,
+    alto
+) {
+    const espejoCompleto = new THREE.Group();
+
+    const grosorMarco = 0.15;
+
+    const marco = new THREE.Mesh(
+        new THREE.ShapeGeometry(
+            crearFormaArco(
+                ancho + grosorMarco * 2,
+                alto + grosorMarco
+            ),
+            32
+        ),
+        materialMarcoEspejo
+    );
+
+    marco.position.z = 0.01;
+    espejoCompleto.add(marco);
+
+    // Resolución bajada a 256 para cuidar los 60 fps
+    const cristal = new Reflector(
+        new THREE.ShapeGeometry(
+            crearFormaArco(ancho, alto),
+            32
+        ),
+        {
+            textureWidth: 256,
+            textureHeight: 256,
+            clipBias: 0.003
+        }
+    );
+
+    cristal.position.z = 0.02;
+    espejoCompleto.add(cristal);
+
+    espejoCompleto.position.set(
+        posicionX,
+        posicionY,
+        posicionZ
+    );
+
+    espejoCompleto.rotation.y = rotacionY;
+
+    escaparate.add(espejoCompleto);
+}
+
+
+// ESPEJOS DE LA PARED TRASERA
+
+crearEspejoArco(0.3, 0.12, -3.785, 0, 2.2, 4.6);
+crearEspejoArco(3.3, 0.12, -3.785, 0, 1.8, 3.0);
+
+// ESPEJO DE LA PARED IZQUIERDA
+
+crearEspejoArco(-5.785, 0.12, -0.6, Math.PI / 2, 1.8, 3.4);
+
+
+// LUCES CÁLIDAS 
+
+function crearTexturaBrillo() {
+
+    const lienzo = document.createElement("canvas");
+    lienzo.width = 128;
+    lienzo.height = 8;
+
+    const pincel = lienzo.getContext("2d");
+
+    const degradado = pincel.createLinearGradient(0, 0, 128, 0);
+    degradado.addColorStop(0, "rgba(255, 160, 70, 0)");
+    degradado.addColorStop(0.5, "rgba(255, 160, 70, 0.5)");
+    degradado.addColorStop(1, "rgba(255, 160, 70, 0)");
+
+    pincel.fillStyle = degradado;
+    pincel.fillRect(0, 0, 128, 8);
+
+    const textura = new THREE.CanvasTexture(lienzo);
+    textura.colorSpace = THREE.SRGBColorSpace;
+
+    return textura;
+}
+
+const materialLuzCalida = new THREE.MeshBasicMaterial({
+    color: "#ffd08a"
+});
+
+const materialBrillo = new THREE.MeshBasicMaterial({
+    map: crearTexturaBrillo(),
+    transparent: true,
+    depthWrite: false
+});
+
+
+// BARRA DE LUZ VERTICAL
+
+function crearBarraLuz(x, z, ancho, alto, rotacionY) {
+
+    const grupo = new THREE.Group();
+
+    const barra = new THREE.Mesh(
+        new THREE.BoxGeometry(ancho, alto, 0.1),
+        materialLuzCalida
+    );
+
+    grupo.add(barra);
+
+    // plano de brillo suave delante de la barra
+    const brillo = new THREE.Mesh(
+        new THREE.PlaneGeometry(ancho * 2.5, alto),
+        materialBrillo
+    );
+
+    brillo.position.z = 0.06;
+    grupo.add(brillo);
+
+    grupo.position.set(x, 0.12 + alto / 2, z);
+    grupo.rotation.y = rotacionY;
+
+    escaparate.add(grupo);
+}
+
+
+//ARO DE LUZ
+
+function crearAureola(x, y, z, rotacionY, radio) {
+
+    const aureola = new THREE.Mesh(
+        new THREE.TorusGeometry(radio, 0.04, 12, 48),
+        materialLuzCalida
+    );
+
+    aureola.position.set(x, y, z);
+    aureola.rotation.y = rotacionY;
+
+    escaparate.add(aureola);
+}
+
+
+// BARRAS DE LA PARED TRASERA
+
+crearBarraLuz(5.6, -3.735, 0.3, 6.5, 0);      
+crearBarraLuz(1.9, -3.735, 0.3, 2.2, 0);       
+
+
+// BARRA DE LA PARED IZQUIERDA
+
+crearBarraLuz(-5.735, 1.3, 0.3, 4.2, Math.PI / 2);
+
+
+// PIEZAS IMPORTADAS (chess_figures.glb)
+
+const piezas = [];
+
+
+// COLOCAR UNA PIEZA EN EL PISO
+
+function colocarPieza(numero, material, x, z, altura, giro) {
+
+    const pieza = new THREE.Mesh(
+        piezas[numero].geometria,
+        material
+    );
+
+    const escala = altura / piezas[numero].altura;
+
+    pieza.scale.set(escala, escala, escala);
+    pieza.position.set(x, 0.12, z);
+    pieza.rotation.y = giro;
+
+    escaparate.add(pieza);
+
+    return pieza;
+}
+
+
+// COLOCAR UNA PIEZA EN LA PARED TRASERA 
+
+function colocarEnParedTrasera(numero, material, x, y, altura, giro) {
+
+    const pieza = new THREE.Mesh(
+        piezas[numero].geometria,
+        material
+    );
+
+    const escala = altura / piezas[numero].altura;
+
+    pieza.scale.set(escala, escala, escala);
+    pieza.rotation.y = giro;
+
+    const grupo = new THREE.Group();
+    grupo.add(pieza);
+
+    grupo.position.set(x, y, -3.78);
+    grupo.rotation.x = Math.PI / 2;
+
+    escaparate.add(grupo);
+
+    // aro de luz alrededor de la base
+    crearAureola(x, y, -3.745, 0, altura * 0.27);
+}
+
+
+// COLOCAR UNA PIEZA EN LA PARED IZQUIERDA
+
+function colocarEnParedIzquierda(numero, material, z, y, altura, giro) {
+
+    const pieza = new THREE.Mesh(
+        piezas[numero].geometria,
+        material
+    );
+
+    const escala = altura / piezas[numero].altura;
+
+    pieza.scale.set(escala, escala, escala);
+    pieza.rotation.y = giro;
+
+    const grupo = new THREE.Group();
+    grupo.add(pieza);
+
+    grupo.position.set(-5.78, y, z);
+    grupo.rotation.z = -Math.PI / 2;
+
+    escaparate.add(grupo);
+
+    // aro de luz alrededor de la base
+    crearAureola(-5.745, y, z, Math.PI / 2, altura * 0.27);
+}
+
+
+// TORRES QUE SE ANIMAN
+
+let torreRoja;
+let torreBlanca;
+
+
+// CARGAR EL ARCHIVO
+
+const cargador = new GLTFLoader();
+
+cargador.load("./modelos/chess_figures.glb", function(gltf) {
+
+    gltf.scene.updateMatrixWorld(true);
+
+    // Sacar cada pieza, centrarla y apoyar su base en y = 0
+    gltf.scene.traverse(function(objeto) {
+
+        if (objeto.isMesh) {
+
+            const geometria = objeto.geometry.clone();
+            geometria.applyMatrix4(objeto.matrixWorld);
+            geometria.computeBoundingBox();
+
+            const caja = geometria.boundingBox;
+
+            const altura = caja.max.y - caja.min.y;
+
+            geometria.translate(
+                -(caja.min.x + caja.max.x) / 2,
+                -caja.min.y,
+                -(caja.min.z + caja.max.z) / 2
+            );
+
+            piezas.push({
+                geometria: geometria,
+                altura: altura
+            });
+        }
+    });
+
+
+    // PIEZAS DEL PISO
+
+    torreRoja = colocarPieza(4, materialPiezaRoja, -4.0, 2.0, 3.6, 0.3); 
+    torreBlanca = colocarPieza(10, materialPiezaBlanca, 3.8, 2.0, 4.6, 0); 
+    colocarPieza(11, materialPiezaBlanca, -1.0, 1.0, 1.7, 0);
+    colocarPieza(5, materialPiezaRoja, 1.2, -0.8, 1.3, 0); 
+    colocarPieza(5, materialPiezaNegra, 4.9, -1.4, 1.5, 0); 
+    colocarPieza(3, materialPiezaNegra, -2.6, -1.6, 1.4, 3 * Math.PI / 4); 
+    colocarPieza(7, materialPiezaBlanca, 0.6, 3.1, 1.3, 0); 
+
+
+    // PIEZAS DE LA PARED TRASERA
+
+    colocarEnParedTrasera(5, materialPiezaNegra, -2.2, 4.3, 2.4, 0);
+    colocarEnParedTrasera(11, materialPiezaBlanca, 3.0, 6.9, 2.0, 0); 
+    colocarEnParedTrasera(5, materialPiezaNegra, 5.0, 2.8, 1.8, 0);
+    colocarEnParedTrasera(11, materialPiezaRoja, -4.2, 6.2, 1.8, 0); 
+
+
+    // PIEZAS DE LA PARED IZQUIERDA
+
+    colocarEnParedIzquierda(11, materialPiezaBlanca, 2.4, 6.0, 2.2, 0); 
+    colocarEnParedIzquierda(5, materialPiezaRoja, -0.2, 6.8, 1.9, 0); 
+    colocarEnParedIzquierda(5, materialPiezaNegra, -2.6, 2.6, 1.8, 0);   
+
+    console.log("Piezas cargadas:", piezas.length);  
+
+}, undefined, function(error) {
+    console.log("Error al cargar el modelo:", error);
+});
+
+
+// MANO GIGANTE
+
+const tamañoMano = 16;              
+const manoX = 0;                  
+const manoZ = 0;                   
+const manoAltura = 0;               
+const manoVuelta = Math.PI / 2;    
+const manoGiro = Math.PI;           
+const manoInclinacion = 0;          
+const colorMano = "#c41424";      
+
+const cargadorMano = new GLTFLoader();
+
+cargadorMano.load("./modelos/hand_gesture1.glb", function(gltf) {
+
+    const mano = gltf.scene;
+
+    //darle color: un material nuevo de la mano
+    let materialMano;
+
+    mano.traverse(function(objeto) {
+
+        if (objeto.isMesh) {
+
+            if (!materialMano) {
+                materialMano = new THREE.MeshStandardMaterial({
+                    color: colorMano,
+                    roughness: 0.35,
+                    metalness: 0.15,
+                    normalMap: objeto.material.normalMap,
+                    side: THREE.DoubleSide
+                });
+            }
+
+            objeto.material = materialMano;
+        }
+    });
+
+    //centrar la mano en su propio origen
+    const caja = new THREE.Box3().setFromObject(mano);
+    const centro = new THREE.Vector3();
+    const tamaño = new THREE.Vector3();
+
+    caja.getCenter(centro);
+    caja.getSize(tamaño);
+
+    mano.position.set(-centro.x, -centro.y, -centro.z);
+
+    //rotar
+    const girada = new THREE.Group();
+    girada.add(mano);
+    girada.rotation.z = manoVuelta;
+
+    //dedos
+    const inclinada = new THREE.Group();
+    inclinada.add(girada);
+    inclinada.rotation.x = manoInclinacion;
+
+    const soporteMano = new THREE.Group();
+    soporteMano.add(inclinada);
+    soporteMano.rotation.y = manoGiro;
+
+    const mayor = Math.max(tamaño.x, tamaño.y, tamaño.z);
+    const escala = tamañoMano / mayor;
+    soporteMano.scale.set(escala, escala, escala);
+
+    //ponerla debajo del escaparate
+    soporteMano.position.set(manoX, 0, manoZ);
+    soporteMano.updateMatrixWorld(true);
+
+    const cajaFinal = new THREE.Box3().setFromObject(soporteMano, true);
+    soporteMano.position.y = manoAltura - cajaFinal.max.y;
+
+    scene.add(soporteMano);
+
+}, undefined, function(error) {
+    console.log("Error al cargar la mano:", error);
+});
 
 
 // CÁMARA
@@ -792,7 +959,6 @@ renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping =
     THREE.ACESFilmicToneMapping;
 
-// Menor exposición para evitar blancos demasiado brillantes
 renderer.toneMappingExposure = 0.85;
 
 
@@ -805,6 +971,9 @@ const generadorReflejos =
 
 scene.environment =
     generadorReflejos.fromScene(entorno).texture;
+
+// Iluminacion del entorno
+scene.environmentIntensity = 0.12;
 
 entorno.dispose();
 generadorReflejos.dispose();
@@ -828,8 +997,8 @@ controles.update();
 // LUZ AMBIENTAL
 
 const luzAmbiente = new THREE.AmbientLight(
-    "#ffffff",
-    1.1
+    "#ffeedd",
+    0.12
 );
 
 scene.add(luzAmbiente);
@@ -838,8 +1007,8 @@ scene.add(luzAmbiente);
 // LUZ PRINCIPAL
 
 const luzPrincipal = new THREE.DirectionalLight(
-    "#fff1d6",
-    2.2
+    "#ffd9a8",
+    1.2
 );
 
 luzPrincipal.position.set(7, 13, 10);
@@ -858,21 +1027,44 @@ luzRoja.position.set(-3, 5, 3);
 scene.add(luzRoja);
 
 
-// LUZ EXTERIOR
+// LUZ CÁLIDA 
 
-const luzExterior = new THREE.DirectionalLight(
-    "#dce8ff",
-    1.2
+const luzCalida = new THREE.PointLight(
+    "#ffb866",
+    20,
+    14
 );
 
-luzExterior.position.set(-10, 10, -10);
-scene.add(luzExterior);
+luzCalida.position.set(4.5, 3.5, -2);
+scene.add(luzCalida);
 
 
 // ANIMACIÓN
 
+const cronometro = new THREE.Clock();
+
 function animar() {
     requestAnimationFrame(animar);
+
+    const t = cronometro.getElapsedTime();
+
+    // relojes: las manecillas giran
+    for (let i = 0; i < manecillasLargas.length; i++) {
+        manecillasLargas[i].rotation.z = -t * 1.5;
+        manecillasCortas[i].rotation.z = -t * 1.5 / 12;
+    }
+
+    // torres: giran lento sobre su propio eje
+    if (torreRoja) {
+        torreRoja.rotation.y = 0.3 + t * 0.3;
+    }
+
+    if (torreBlanca) {
+        torreBlanca.rotation.y = -t * 0.2;
+    }
+
+    // luces
+    materialBrillo.opacity = 0.85 + Math.sin(t * 1.5) * 0.15;
 
     controles.update();
 
