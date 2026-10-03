@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { gsap } from "gsap";
 
 import {
     OrbitControls
@@ -75,7 +76,7 @@ const materialEspejo = new THREE.MeshStandardMaterial({
 });
 
 
-// MATERIALES DE LAS PIEZAS
+// MATERIALES DE LAS PIEZAS (ESTANDAR)
 
 const materialPiezaBlanca = new THREE.MeshStandardMaterial({
     color: "#e4ded4",
@@ -96,6 +97,109 @@ const materialPiezaRoja = new THREE.MeshStandardMaterial({
 });
 
 
+// TEXTURA MATCAP
+
+function crearTexturaMatcap() {
+
+    const lienzo = document.createElement("canvas");
+    lienzo.width = 256;
+    lienzo.height = 256;
+
+    const pincel = lienzo.getContext("2d");
+
+    const degradado = pincel.createRadialGradient(100, 90, 10, 128, 128, 128);
+    degradado.addColorStop(0, "#ffffff");
+    degradado.addColorStop(0.5, "#9a9a9a");
+    degradado.addColorStop(1, "#2a2a2a");
+
+    pincel.fillStyle = degradado;
+    pincel.fillRect(0, 0, 256, 256);
+
+    const textura = new THREE.CanvasTexture(lienzo);
+    textura.colorSpace = THREE.SRGBColorSpace;
+
+    return textura;
+}
+
+
+const tonosToon = new Uint8Array([80, 170, 255]);
+
+const gradienteToon = new THREE.DataTexture(
+    tonosToon,
+    tonosToon.length,
+    1,
+    THREE.RedFormat
+);
+
+gradienteToon.minFilter = THREE.NearestFilter;
+gradienteToon.magFilter = THREE.NearestFilter;
+gradienteToon.needsUpdate = true;
+
+const texturaMatcap = crearTexturaMatcap();
+
+
+// MATERIALES DE LAS PIEZAS MESHES
+
+const materialesPiezas = {
+
+    estandar: {
+        blanca: materialPiezaBlanca,
+        negra: materialPiezaNegra,
+        roja: materialPiezaRoja
+    },
+
+    phong: {
+        blanca: new THREE.MeshPhongMaterial({
+            color: "#e4ded4",
+            specular: "#ffffff",
+            shininess: 90
+        }),
+        negra: new THREE.MeshPhongMaterial({
+            color: "#090909",
+            specular: "#555555",
+            shininess: 120
+        }),
+        roja: new THREE.MeshPhongMaterial({
+            color: "#c41424",
+            specular: "#ff9090",
+            shininess: 80
+        })
+    },
+
+    toon: {
+        blanca: new THREE.MeshToonMaterial({
+            color: "#e4ded4",
+            gradientMap: gradienteToon
+        }),
+        negra: new THREE.MeshToonMaterial({
+            color: "#222222",
+            gradientMap: gradienteToon
+        }),
+        roja: new THREE.MeshToonMaterial({
+            color: "#c41424",
+            gradientMap: gradienteToon
+        })
+    },
+
+    matcap: {
+        blanca: new THREE.MeshMatcapMaterial({
+            matcap: texturaMatcap,
+            color: "#e4ded4"
+        }),
+        negra: new THREE.MeshMatcapMaterial({
+            matcap: texturaMatcap,
+            color: "#2a2a2a"
+        }),
+        roja: new THREE.MeshMatcapMaterial({
+            matcap: texturaMatcap,
+            color: "#c41424"
+        })
+    }
+};
+
+let estiloActual = "estandar";
+
+
 // PISO
 
 const geometriaPiso = new THREE.BoxGeometry(
@@ -110,6 +214,7 @@ const piso = new THREE.Mesh(
 );
 
 piso.position.set(0, 0, 0);
+piso.receiveShadow = true;
 escaparate.add(piso);
 
 
@@ -212,8 +317,6 @@ function crearTexturaTablero(columnas, filas) {
 
     return textura;
 }
-
-
 // MATERIALES DEL TABLERO
 
 const materialTableroPiso = new THREE.MeshStandardMaterial({
@@ -262,6 +365,7 @@ const tableroPiso = new THREE.Mesh(
 
 tableroPiso.rotation.x = -Math.PI / 2;
 tableroPiso.position.y = 0.115;
+tableroPiso.receiveShadow = true;
 escaparate.add(tableroPiso);
 
 
@@ -273,6 +377,7 @@ const tableroParedTrasera = new THREE.Mesh(
 );
 
 tableroParedTrasera.position.set(0, altoEscaparate / 2, -3.79);
+tableroParedTrasera.receiveShadow = true;
 escaparate.add(tableroParedTrasera);
 
 
@@ -285,6 +390,7 @@ const tableroParedIzquierda = new THREE.Mesh(
 
 tableroParedIzquierda.rotation.y = Math.PI / 2;
 tableroParedIzquierda.position.set(-5.79, altoEscaparate / 2, 0);
+tableroParedIzquierda.receiveShadow = true;
 escaparate.add(tableroParedIzquierda);
 
 
@@ -374,10 +480,11 @@ function crearReloj(
 ) {
     const reloj = new THREE.Group();
 
-    const materialMarco = new THREE.MeshStandardMaterial({
+    // Marco del reloj con MeshPhongMaterial (brillo especular)
+    const materialMarco = new THREE.MeshPhongMaterial({
         color: "#b31522",
-        metalness: 0.35,
-        roughness: 0.3
+        specular: "#ffffff",
+        shininess: 90
     });
 
     const materialCaratula = new THREE.MeshStandardMaterial({
@@ -561,7 +668,8 @@ function crearEspejoArco(
     marco.position.z = 0.01;
     espejoCompleto.add(marco);
 
-    // Resolución bajada a 256 para cuidar los 60 fps
+    // RESOLUCION
+
     const cristal = new Reflector(
         new THREE.ShapeGeometry(
             crearFormaArco(ancho, alto),
@@ -634,7 +742,7 @@ const materialBrillo = new THREE.MeshBasicMaterial({
 });
 
 
-// BARRA DE LUZ VERTICAL
+// BARRA DE LUZ 
 
 function crearBarraLuz(x, z, ancho, alto, rotacionY) {
 
@@ -647,7 +755,7 @@ function crearBarraLuz(x, z, ancho, alto, rotacionY) {
 
     grupo.add(barra);
 
-    // plano de brillo suave delante de la barra
+
     const brillo = new THREE.Mesh(
         new THREE.PlaneGeometry(ancho * 2.5, alto),
         materialBrillo
@@ -694,14 +802,34 @@ crearBarraLuz(-5.735, 1.3, 0.3, 4.2, Math.PI / 2);
 
 const piezas = [];
 
+// PIEZAS QUE REACCIONAN AL MOUSE
+
+const piezasInteractivas = [];
+
+function registrarPieza(pieza, altura, nombre, colorNombre) {
+
+    pieza.rotation.order = "XZY";
+
+    pieza.userData.altura = altura;
+    pieza.userData.ocupada = false;
+    pieza.userData.nombre = nombre;
+    pieza.userData.color = colorNombre;
+
+    // sombras
+    pieza.castShadow = true;
+    pieza.receiveShadow = true;
+
+    piezasInteractivas.push(pieza);
+}
+
 
 // COLOCAR UNA PIEZA EN EL PISO
 
-function colocarPieza(numero, material, x, z, altura, giro) {
+function colocarPieza(numero, colorNombre, x, z, altura, giro, nombreExtra) {
 
     const pieza = new THREE.Mesh(
         piezas[numero].geometria,
-        material
+        materialesPiezas[estiloActual][colorNombre]
     );
 
     const escala = altura / piezas[numero].altura;
@@ -712,17 +840,19 @@ function colocarPieza(numero, material, x, z, altura, giro) {
 
     escaparate.add(pieza);
 
+    const nombre = nombreExtra || "Pieza " + numero + " " + colorNombre + " (piso)";
+    registrarPieza(pieza, altura, nombre, colorNombre);
+
     return pieza;
 }
 
 
-// COLOCAR UNA PIEZA EN LA PARED TRASERA 
 
-function colocarEnParedTrasera(numero, material, x, y, altura, giro) {
+function colocarEnParedTrasera(numero, colorNombre, x, y, altura, giro) {
 
     const pieza = new THREE.Mesh(
         piezas[numero].geometria,
-        material
+        materialesPiezas[estiloActual][colorNombre]
     );
 
     const escala = altura / piezas[numero].altura;
@@ -740,16 +870,25 @@ function colocarEnParedTrasera(numero, material, x, y, altura, giro) {
 
     // aro de luz alrededor de la base
     crearAureola(x, y, -3.745, 0, altura * 0.27);
+
+    registrarPieza(
+        pieza,
+        altura,
+        "Pieza " + numero + " " + colorNombre + " (pared trasera)",
+        colorNombre
+    );
+
+    return pieza;
 }
 
 
 // COLOCAR UNA PIEZA EN LA PARED IZQUIERDA
 
-function colocarEnParedIzquierda(numero, material, z, y, altura, giro) {
+function colocarEnParedIzquierda(numero, colorNombre, z, y, altura, giro) {
 
     const pieza = new THREE.Mesh(
         piezas[numero].geometria,
-        material
+        materialesPiezas[estiloActual][colorNombre]
     );
 
     const escala = altura / piezas[numero].altura;
@@ -765,8 +904,17 @@ function colocarEnParedIzquierda(numero, material, z, y, altura, giro) {
 
     escaparate.add(grupo);
 
-    // aro de luz alrededor de la base
+    // aro de luz
     crearAureola(-5.745, y, z, Math.PI / 2, altura * 0.27);
+
+    registrarPieza(
+        pieza,
+        altura,
+        "Pieza " + numero + " " + colorNombre + " (pared izquierda)",
+        colorNombre
+    );
+
+    return pieza;
 }
 
 
@@ -784,7 +932,6 @@ cargador.load("./modelos/chess_figures.glb", function(gltf) {
 
     gltf.scene.updateMatrixWorld(true);
 
-    // Sacar cada pieza, centrarla y apoyar su base en y = 0
     gltf.scene.traverse(function(objeto) {
 
         if (objeto.isMesh) {
@@ -813,28 +960,28 @@ cargador.load("./modelos/chess_figures.glb", function(gltf) {
 
     // PIEZAS DEL PISO
 
-    torreRoja = colocarPieza(4, materialPiezaRoja, -4.0, 2.0, 3.6, 0.3); 
-    torreBlanca = colocarPieza(10, materialPiezaBlanca, 3.8, 2.0, 4.6, 0); 
-    colocarPieza(11, materialPiezaBlanca, -1.0, 1.0, 1.7, 0);
-    colocarPieza(5, materialPiezaRoja, 1.2, -0.8, 1.3, 0); 
-    colocarPieza(5, materialPiezaNegra, 4.9, -1.4, 1.5, 0); 
-    colocarPieza(3, materialPiezaNegra, -2.6, -1.6, 1.4, 3 * Math.PI / 4); 
-    colocarPieza(7, materialPiezaBlanca, 0.6, 3.1, 1.3, 0); 
+    torreRoja = colocarPieza(4, "roja", -4.0, 2.0, 3.6, 0.3, "Torre roja");
+    torreBlanca = colocarPieza(10, "blanca", 3.8, 2.0, 4.6, 0, "Torre blanca");
+    colocarPieza(11, "blanca", -1.0, 1.0, 1.7, 0);
+    colocarPieza(5, "roja", 1.2, -0.8, 1.3, 0); 
+    colocarPieza(5, "negra", 4.9, -1.4, 1.5, 0); 
+    colocarPieza(3, "negra", -2.6, -1.6, 1.4, 3 * Math.PI / 4); 
+    colocarPieza(7, "blanca", 0.6, 3.1, 1.3, 0); 
 
 
     // PIEZAS DE LA PARED TRASERA
 
-    colocarEnParedTrasera(5, materialPiezaNegra, -2.2, 4.3, 2.4, 0);
-    colocarEnParedTrasera(11, materialPiezaBlanca, 3.0, 6.9, 2.0, 0); 
-    colocarEnParedTrasera(5, materialPiezaNegra, 5.0, 2.8, 1.8, 0);
-    colocarEnParedTrasera(11, materialPiezaRoja, -4.2, 6.2, 1.8, 0); 
+    colocarEnParedTrasera(5, "negra", -2.2, 4.3, 2.4, 0);
+    colocarEnParedTrasera(11, "blanca", 3.0, 6.9, 2.0, 0); 
+    colocarEnParedTrasera(5, "negra", 5.0, 2.8, 1.8, 0);
+    colocarEnParedTrasera(11, "roja", -4.2, 6.2, 1.8, 0); 
 
 
     // PIEZAS DE LA PARED IZQUIERDA
 
-    colocarEnParedIzquierda(11, materialPiezaBlanca, 2.4, 6.0, 2.2, 0); 
-    colocarEnParedIzquierda(5, materialPiezaRoja, -0.2, 6.8, 1.9, 0); 
-    colocarEnParedIzquierda(5, materialPiezaNegra, -2.6, 2.6, 1.8, 0);   
+    colocarEnParedIzquierda(11, "blanca", 2.4, 6.0, 2.2, 0); 
+    colocarEnParedIzquierda(5, "roja", -0.2, 6.8, 1.9, 0); 
+    colocarEnParedIzquierda(5, "negra", -2.6, 2.6, 1.8, 0);   
 
     console.log("Piezas cargadas:", piezas.length);  
 
@@ -860,7 +1007,7 @@ cargadorMano.load("./modelos/hand_gesture1.glb", function(gltf) {
 
     const mano = gltf.scene;
 
-    //darle color: un material nuevo de la mano
+    //COLOr
     let materialMano;
 
     mano.traverse(function(objeto) {
@@ -881,7 +1028,7 @@ cargadorMano.load("./modelos/hand_gesture1.glb", function(gltf) {
         }
     });
 
-    //centrar la mano en su propio origen
+
     const caja = new THREE.Box3().setFromObject(mano);
     const centro = new THREE.Vector3();
     const tamaño = new THREE.Vector3();
@@ -891,12 +1038,12 @@ cargadorMano.load("./modelos/hand_gesture1.glb", function(gltf) {
 
     mano.position.set(-centro.x, -centro.y, -centro.z);
 
-    //rotar
+
     const girada = new THREE.Group();
     girada.add(mano);
     girada.rotation.z = manoVuelta;
 
-    //dedos
+
     const inclinada = new THREE.Group();
     inclinada.add(girada);
     inclinada.rotation.x = manoInclinacion;
@@ -909,7 +1056,7 @@ cargadorMano.load("./modelos/hand_gesture1.glb", function(gltf) {
     const escala = tamañoMano / mayor;
     soporteMano.scale.set(escala, escala, escala);
 
-    //ponerla debajo del escaparate
+
     soporteMano.position.set(manoX, 0, manoZ);
     soporteMano.updateMatrixWorld(true);
 
@@ -961,6 +1108,10 @@ renderer.toneMapping =
 
 renderer.toneMappingExposure = 0.85;
 
+// SOMBRAS
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
 
 // ENTORNO PARA LOS ESPEJOS
 
@@ -972,7 +1123,6 @@ const generadorReflejos =
 scene.environment =
     generadorReflejos.fromScene(entorno).texture;
 
-// Iluminacion del entorno
 scene.environmentIntensity = 0.12;
 
 entorno.dispose();
@@ -994,7 +1144,7 @@ controles.maxDistance = 35;
 controles.update();
 
 
-// LUZ AMBIENTAL
+// LUZ CALIDA
 
 const luzAmbiente = new THREE.AmbientLight(
     "#ffeedd",
@@ -1012,6 +1162,18 @@ const luzPrincipal = new THREE.DirectionalLight(
 );
 
 luzPrincipal.position.set(7, 13, 10);
+
+luzPrincipal.castShadow = true;
+luzPrincipal.shadow.mapSize.set(1024, 1024);
+luzPrincipal.shadow.camera.left = -10;
+luzPrincipal.shadow.camera.right = 10;
+luzPrincipal.shadow.camera.top = 10;
+luzPrincipal.shadow.camera.bottom = -10;
+luzPrincipal.shadow.camera.near = 1;
+luzPrincipal.shadow.camera.far = 40;
+luzPrincipal.shadow.bias = -0.0005;
+luzPrincipal.shadow.normalBias = 0.03;
+
 scene.add(luzPrincipal);
 
 
@@ -1039,6 +1201,202 @@ luzCalida.position.set(4.5, 3.5, -2);
 scene.add(luzCalida);
 
 
+// INTERACCIÓN CON EL MOUSE
+
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+
+let piezaBajoMouse = null;
+
+let clickInicioX = 0;
+let clickInicioY = 0;
+
+function actualizarMouse(evento) {
+
+    const caja = canvas.getBoundingClientRect();
+
+    mouse.x = ((evento.clientX - caja.left) / caja.width) * 2 - 1;
+    mouse.y = -((evento.clientY - caja.top) / caja.height) * 2 + 1;
+}
+
+function buscarPieza() {
+
+    raycaster.setFromCamera(mouse, camera);
+
+    const golpes = raycaster.intersectObjects(piezasInteractivas, false);
+
+    if (golpes.length > 0) {
+        return golpes[0];
+    }
+
+    return null;
+}
+
+
+// EMPUJÓN
+
+function empujarPieza(pieza, punto) {
+
+    const local = pieza.parent.worldToLocal(punto.clone());
+
+    let dx = pieza.position.x - local.x;
+    let dz = pieza.position.z - local.z;
+    let largo = Math.sqrt(dx * dx + dz * dz);
+
+    if (largo < 0.0001) {
+        dx = 1;
+        dz = 0;
+        largo = 1;
+    }
+
+    dx = dx / largo;
+    dz = dz / largo;
+
+    const fuerza = 0.35;
+
+    gsap.killTweensOf(pieza.rotation);
+
+    const linea = gsap.timeline();
+
+    linea.to(pieza.rotation, {
+        x: dz * fuerza,
+        z: -dx * fuerza,
+        duration: 0.12,
+        ease: "power2.out"
+    });
+
+    linea.to(pieza.rotation, {
+        x: 0,
+        z: 0,
+        duration: 1.8,
+        ease: "elastic.out(1, 0.15)"
+    });
+}
+
+
+// CLICKS
+
+function saltarPieza(pieza) {
+
+    if (pieza.userData.ocupada) {
+        return;
+    }
+
+    pieza.userData.ocupada = true;
+
+    const yBase = pieza.position.y;
+    const salto = pieza.userData.altura * 0.35;
+
+    const linea = gsap.timeline({
+        onComplete: function() {
+            pieza.position.y = yBase;
+            pieza.userData.ocupada = false;
+        }
+    });
+
+    linea.to(pieza.position, {
+        y: yBase + salto,
+        duration: 0.22,
+        ease: "power2.out"
+    });
+
+    linea.to(pieza.position, {
+        y: yBase,
+        duration: 0.6,
+        ease: "bounce.out"
+    });
+}
+
+
+// CAMBIAR EL ESTILO DE MATERIAL DE TODAS LAS PIEZAS
+
+function cambiarEstilo(nombre) {
+
+    estiloActual = nombre;
+
+    for (let i = 0; i < piezasInteractivas.length; i++) {
+
+        const pieza = piezasInteractivas[i];
+        pieza.material = materialesPiezas[nombre][pieza.userData.color];
+    }
+}
+
+
+// EVENTOS
+
+canvas.addEventListener("pointermove", function(evento) {
+
+
+    if (evento.buttons !== 0) {
+        return;
+    }
+
+    actualizarMouse(evento);
+
+    const golpe = buscarPieza();
+
+    if (golpe) {
+
+        const pieza = golpe.object;
+        canvas.style.cursor = "pointer";
+
+     
+        if (pieza !== piezaBajoMouse) {
+            piezaBajoMouse = pieza;
+            empujarPieza(pieza, golpe.point);
+        }
+
+    } else {
+        piezaBajoMouse = null;
+        canvas.style.cursor = "default";
+    }
+});
+
+canvas.addEventListener("pointerdown", function(evento) {
+    clickInicioX = evento.clientX;
+    clickInicioY = evento.clientY;
+});
+
+canvas.addEventListener("click", function(evento) {
+
+    const movioX = Math.abs(evento.clientX - clickInicioX);
+    const movioY = Math.abs(evento.clientY - clickInicioY);
+
+    if (movioX > 5 || movioY > 5) {
+        return;
+    }
+
+    actualizarMouse(evento);
+
+    const golpe = buscarPieza();
+
+    if (golpe) {
+        saltarPieza(golpe.object);
+    }
+});
+
+window.addEventListener("keydown", function(evento) {
+
+    const tecla = evento.key.toLowerCase();
+
+    if (tecla === "1") {
+        cambiarEstilo("estandar");
+    }
+
+    if (tecla === "2") {
+        cambiarEstilo("phong");
+    }
+
+    if (tecla === "3") {
+        cambiarEstilo("toon");
+    }
+
+    if (tecla === "4") {
+        cambiarEstilo("matcap");
+    }
+});
+
+
 // ANIMACIÓN
 
 const cronometro = new THREE.Clock();
@@ -1063,7 +1421,7 @@ function animar() {
         torreBlanca.rotation.y = -t * 0.2;
     }
 
-    // luces
+    // LUCES
     materialBrillo.opacity = 0.85 + Math.sin(t * 1.5) * 0.15;
 
     controles.update();
