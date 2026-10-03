@@ -1054,7 +1054,7 @@ function animar() {
         manecillasCortas[i].rotation.z = -t * 1.5 / 12;
     }
 
-    // torres: giran lento sobre su propio eje
+    // coronas giratorias de torres
     if (torreRoja) {
         torreRoja.rotation.y = 0.3 + t * 0.3;
     }
