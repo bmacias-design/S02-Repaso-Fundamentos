@@ -1,12 +1,16 @@
-# Escaparate de ajedrez
+# Escaparate Chess
 
-Escaparate 3D hecho con **Three.js**: un cuarto de tablero de ajedrez con piezas gigantes, espejos con arco, relojes y luces cálidas.
+Proyecto de una escena tridimensional desarrollado con JavaScript. Integra modelos 3D exportados y texturas, junto con animación y renderizado para construir la presentación visual.
 
+Recursos utilizados
 
-## Qué incluye
+JavaScript para la programación de la escena.
 
-- Piso y paredes con textura de tablero (`CanvasTexture`).
-- Piso y espejos con arco reflejantes (`Reflector`).
-- Piezas de ajedrez importadas (`GLTFLoader`) repartidas por el piso y las paredes, en distintos tamaños.
-- Relojes, tiras de luz y aros de luz cálidos.
-- Controles de cámara con el mouse (`OrbitControls`).
+Modelos 3D exportados al proyecto.
+
+Texturas aplicadas.
+
+Animación de elementos.
+
+Renderizado de la escena 3D.
+>>>>>>> f32a904d99667d00a8c387bfdf8aa95db1615938
